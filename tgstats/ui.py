@@ -245,3 +245,23 @@ def show_chats(chats):
             f"{count_messages(chat):,}",
         )
     console.print(table)
+
+
+def show_all_summary(stats, top):
+    section("All chats")
+    console.print(Text(f"{stats.chats_analyzed} chats analyzed, {stats.total_messages:,} messages"
+                       + (f", {stats.owner_messages:,} by you" if stats.owner_messages is not None else ", sender unknown (use --me)")))
+    for warning in stats.warnings:
+        console.print(Text(f"Note: {warning}", style="yellow"))
+    table = Table(title="Chat ranking", header_style="bold magenta", border_style="dim")
+    for column, right in (("Chat", False), ("Type", False), ("Messages", True), ("Yours", True), ("Active days", True), ("Media", True)):
+        table.add_column(column, justify="right" if right else "left", overflow="fold")
+    for chat in stats.chats[:top]:
+        table.add_row(
+            Text(chat.name), readable_kind(chat.kind), f"{chat.total_messages:,}",
+            "?" if chat.owner_messages is None else f"{chat.owner_messages:,}",
+            f"{chat.active_days:,}", f"{chat.media_messages:,}",
+        )
+    console.print(table)
+    if stats.skipped:
+        console.print(Text(f"{len(stats.skipped)} chat(s) skipped: no messages in the date range.", style="dim"))

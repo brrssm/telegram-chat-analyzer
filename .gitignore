@@ -12,3 +12,16 @@ stats.json
 result.json
 .env
 .DS_Store
+
+# Private data: never commit Telegram exports or generated reports
+result*.json
+*.report.html
+*_report.html
+report*.html
+stats*.json
+analysis*.json
+TelegramExport/
+Telegram Desktop/
+ChatExport_*/
+chats/
+export*/

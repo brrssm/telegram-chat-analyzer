@@ -1,9 +1,10 @@
 import statistics
 from collections import Counter
 from dataclasses import dataclass, field
+from datetime import timedelta
 from typing import Optional
 
-from .textutils import content_words, extract_features
+from .textutils import content_words, extract_features, is_content_word
 
 DEFAULT_GAP_HOURS = 6.0
 NIGHT_END_HOUR = 5
@@ -81,6 +82,20 @@ class ChatStats:
     top_emojis: list
     people: list
     awards: list
+    heatmap: list = field(default_factory=list)
+    daily: list = field(default_factory=list)
+    weekly: list = field(default_factory=list)
+    median_per_active_day: float = 0.0
+    text_messages: int = 0
+    avg_message_chars: Optional[float] = None
+    longest_message_chars: int = 0
+    forwarded_total: int = 0
+    edited_total: int = 0
+    replies_total: int = 0
+    media_messages: int = 0
+    most_active_weekday: int = 0
+    most_active_hour: int = 0
+    top_phrases: list = field(default_factory=list)
 
 
 class _Accumulator:
@@ -185,6 +200,10 @@ def analyze(messages, chat_name="", chat_kind="", top=10, gap_hours=DEFAULT_GAP_
     weekday = [0] * 7
     day_counts = Counter()
     month_counts = Counter()
+    week_counts = Counter()
+    heatmap = [[0] * 24 for _ in range(7)]
+    phrases = Counter()
+    longest_chars = 0
     longest_gap = 0.0
     gap_start = None
     gap_end = None
@@ -203,6 +222,9 @@ def analyze(messages, chat_name="", chat_kind="", top=10, gap_hours=DEFAULT_GAP_
         weekday[message.date.weekday()] += 1
         day_counts[message.date.date()] += 1
         month_counts[(message.date.year, message.date.month)] += 1
+        monday = message.date.date() - timedelta(days=message.date.weekday())
+        week_counts[monday] += 1
+        heatmap[message.date.weekday()][hour] += 1
 
         if hour < NIGHT_END_HOUR:
             person.night_messages += 1
@@ -226,7 +248,10 @@ def analyze(messages, chat_name="", chat_kind="", top=10, gap_hours=DEFAULT_GAP_
             person.emojis += len(features.emojis)
             person.laughs += 1 if features.laugh else 0
             person.questions += 1 if features.question else 0
+            longest_chars = max(longest_chars, len(message.text))
             accumulator.vocabulary.update(features.tokens)
+            kept = [token for token in features.tokens if is_content_word(token)]
+            phrases.update(zip(kept, kept[1:]))
             accumulator.words.update(content_words(features.tokens))
             accumulator.emojis.update(features.emojis)
 
@@ -308,4 +333,24 @@ def analyze(messages, chat_name="", chat_kind="", top=10, gap_hours=DEFAULT_GAP_
         top_emojis=overall_emojis.most_common(top),
         people=people,
         awards=build_awards(people),
+        heatmap=heatmap,
+        daily=sorted((day.isoformat(), count) for day, count in day_counts.items()),
+        weekly=sorted((day.isoformat(), count) for day, count in week_counts.items()),
+        median_per_active_day=float(statistics.median(day_counts.values())),
+        text_messages=sum(p.text_messages for p in people),
+        avg_message_chars=(
+            sum(p.characters for p in people) / sum(p.text_messages for p in people)
+            if any(p.text_messages for p in people)
+            else None
+        ),
+        longest_message_chars=longest_chars,
+        forwarded_total=sum(p.forwarded for p in people),
+        edited_total=sum(p.edited for p in people),
+        replies_total=sum(p.replies for p in people),
+        media_messages=sum(overall_media.values()),
+        most_active_weekday=max(range(7), key=lambda d: (weekday[d], -d)),
+        most_active_hour=max(range(24), key=lambda h: (hourly[h], -h)),
+        top_phrases=[
+            (" ".join(pair), count) for pair, count in phrases.most_common(top) if count >= 2
+        ],
     )

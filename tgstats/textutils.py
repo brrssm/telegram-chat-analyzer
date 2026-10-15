@@ -97,9 +97,21 @@ def tokenize(text):
     return tokenize_normalized(normalize(text))
 
 
+_EXTRA_STOPWORDS = set()
+
+
+def set_extra_stopwords(words):
+    """Add user-supplied stopwords (normalized the same way as tokens)."""
+    _EXTRA_STOPWORDS.clear()
+    for word in words:
+        word = normalize(word).strip()
+        if word:
+            _EXTRA_STOPWORDS.add(word)
+
+
 def is_content_word(token):
     bare = token.replace(ZWNJ, "")
-    return len(bare) >= 2 and token not in STOPWORDS and not NOISE_RE.match(bare)
+    return len(bare) >= 2 and token not in STOPWORDS and token not in _EXTRA_STOPWORDS and not NOISE_RE.match(bare)
 
 
 def content_words(tokens):
