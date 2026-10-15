@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "telegram-chat-analyzer"
+version = "1.0.0"
+description = "Analyze a Telegram chat export locally: activity, reply times, words, emojis and a shareable HTML report."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = ["rich>=13.0"]
+
+[project.scripts]
+tgstats = "tgstats.cli:main"
+
+[tool.setuptools]
+packages = ["tgstats"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

@@ -1,0 +1,14 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+demo_chat.json
+report.html
+stats.json
+result.json
+.env
+.DS_Store
